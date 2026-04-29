@@ -1,4 +1,5 @@
-import { Sun, Moon, Plus, Upload, Download, FileSpreadsheet, Search, ShoppingBag, Trash2, X } from 'lucide-react'
+import { Sun, Moon, Plus, Upload, Download, FileSpreadsheet, Search, ShoppingBag, Trash2, X, Sparkles } from 'lucide-react'
+import { COLORS, SIZES } from '../constants.js'
 
 const STATUS_OPTIONS = [
   { value: 'all',               label: 'Alle Status' },
@@ -10,13 +11,19 @@ const STATUS_OPTIONS = [
   { value: 'teilrückerstattung',label: 'Teilrückerstattung' },
 ]
 
+const selectCls = 'px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer'
+
 export default function Header({
   darkMode, onToggleDark,
   searchQuery, onSearch,
   statusFilter, onFilterChange,
+  groesseFilter, onGroesseChange,
+  farbenFilter, onFarbenChange,
   onAdd, onImport, onExportCSV, onExportExcel,
-  onDeleteAll, totalCount,
+  onAutoExtract, totalCount,
 }) {
+  const activeFilters = [statusFilter !== 'all', groesseFilter !== 'all', farbenFilter !== 'all'].filter(Boolean).length
+
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-10">
       <div className="max-w-screen-2xl mx-auto px-6 py-3">
@@ -44,10 +51,10 @@ export default function Header({
           </button>
         </div>
 
-        {/* Controls row */}
-        <div className="flex flex-wrap gap-2 items-center">
+        {/* Search + filters row */}
+        <div className="flex flex-wrap gap-2 items-center mb-2">
           {/* Search */}
-          <div className="relative flex-1 min-w-[180px]">
+          <div className="relative flex-1 min-w-[200px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
@@ -70,15 +77,51 @@ export default function Header({
           <select
             value={statusFilter}
             onChange={e => onFilterChange(e.target.value)}
-            className="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white cursor-pointer"
+            className={selectCls + (statusFilter !== 'all' ? ' ring-2 ring-indigo-400' : '')}
           >
             {STATUS_OPTIONS.map(o => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
 
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
+          {/* Größe filter */}
+          <select
+            value={groesseFilter}
+            onChange={e => onGroesseChange(e.target.value)}
+            className={selectCls + (groesseFilter !== 'all' ? ' ring-2 ring-indigo-400' : '')}
+          >
+            <option value="all">Alle Größen</option>
+            {SIZES.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
 
+          {/* Farbe filter */}
+          <select
+            value={farbenFilter}
+            onChange={e => onFarbenChange(e.target.value)}
+            className={selectCls + (farbenFilter !== 'all' ? ' ring-2 ring-indigo-400' : '')}
+          >
+            <option value="all">Alle Farben</option>
+            {COLORS.map(c => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+
+          {activeFilters > 0 && (
+            <button
+              onClick={() => { onFilterChange('all'); onGroesseChange('all'); onFarbenChange('all') }}
+              className="flex items-center gap-1 px-2.5 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors"
+              title="Alle Filter zurücksetzen"
+            >
+              <X size={12} />
+              Filter ({activeFilters})
+            </button>
+          )}
+        </div>
+
+        {/* Actions row */}
+        <div className="flex flex-wrap gap-2 items-center">
           {/* Add */}
           <button
             onClick={onAdd}
@@ -118,17 +161,16 @@ export default function Header({
             <span className="hidden sm:inline">Excel</span>
           </button>
 
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
-
-          {/* Delete all */}
+          {/* Auto-extract */}
           <button
-            onClick={onDeleteAll}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-red-50 dark:bg-red-950 hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400 rounded-lg transition-colors border border-red-200 dark:border-red-800"
-            title="Alle Einträge löschen"
+            onClick={onAutoExtract}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-violet-50 dark:bg-violet-950 hover:bg-violet-100 dark:hover:bg-violet-900 text-violet-700 dark:text-violet-400 rounded-lg transition-colors border border-violet-200 dark:border-violet-800"
+            title="Größe und Farbe automatisch aus Artikelname erkennen"
           >
-            <Trash2 size={15} />
-            <span className="hidden sm:inline">Alle löschen</span>
+            <Sparkles size={15} />
+            <span className="hidden sm:inline">Auto-Erkennung</span>
           </button>
+
         </div>
       </div>
     </header>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from './supabase.js'
+import { extractSizeAndColors } from './utils.js'
 import Header from './components/Header.jsx'
 import Table from './components/Table.jsx'
 import EntryModal from './components/EntryModal.jsx'
@@ -29,6 +30,8 @@ function processEntry(entry) {
     verkauf,
     gewinn: verkauf === 0 ? 0 : verkauf - einkauf,
     status,
+    groesse: entry.groesse || '',
+    farben: Array.isArray(entry.farben) ? entry.farben : [],
     notizen: entry.notizen || '',
   }
 }
@@ -44,6 +47,8 @@ function toDb(entry) {
     verkauf: entry.verkauf || 0,
     gewinn: entry.gewinn || 0,
     status: entry.status || 'verfügbar',
+    groesse: entry.groesse || '',
+    farben: Array.isArray(entry.farben) ? entry.farben.join(',') : '',
     notizen: entry.notizen || '',
   }
 }
@@ -58,6 +63,8 @@ function fromDb(row) {
     einkauf: row.einkauf,
     verkauf: row.verkauf,
     status: row.status,
+    groesse: row.groesse || '',
+    farben: row.farben ? row.farben.split(',').filter(Boolean) : [],
     notizen: row.notizen,
   })
 }
@@ -80,12 +87,24 @@ function parseExcelDate(val) {
   return ''
 }
 
+function fuzzyMatch(text, word) {
+  const t = (text || '').toLowerCase()
+  const q = word.toLowerCase()
+  let qi = 0
+  for (let i = 0; i < t.length && qi < q.length; i++) {
+    if (t[i] === q[qi]) qi++
+  }
+  return qi === q.length
+}
+
 export default function App() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('vb_dark') === 'true')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [groesseFilter, setGroesseFilter] = useState('all')
+  const [farbenFilter, setFarbenFilter] = useState('all')
   const [sortConfig, setSortConfig] = useState({ key: 'datumEinkauf', direction: 'desc' })
   const [modal, setModal] = useState(null)
   const [deletedEntry, setDeletedEntry] = useState(null)
@@ -111,13 +130,14 @@ export default function App() {
   const filtered = useMemo(() => {
     let r = [...entries]
     if (statusFilter !== 'all') r = r.filter(e => e.status === statusFilter)
+    if (groesseFilter !== 'all') r = r.filter(e => e.groesse === groesseFilter)
+    if (farbenFilter !== 'all') r = r.filter(e => (e.farben || []).includes(farbenFilter))
     if (search.trim()) {
-      const q = search.toLowerCase()
-      r = r.filter(e =>
-        (e.name || '').toLowerCase().includes(q) ||
-        (e.artikelnummer || '').toLowerCase().includes(q) ||
-        (e.notizen || '').toLowerCase().includes(q)
-      )
+      const words = search.trim().split(/\s+/).filter(Boolean)
+      r = r.filter(e => {
+        const fields = [e.name, e.artikelnummer, e.notizen, e.groesse, ...(e.farben || [])]
+        return words.every(word => fields.some(field => fuzzyMatch(field, word)))
+      })
     }
     r.sort((a, b) => {
       let av = a[sortConfig.key] ?? ''
@@ -131,7 +151,7 @@ export default function App() {
       return 0
     })
     return r
-  }, [entries, statusFilter, search, sortConfig])
+  }, [entries, statusFilter, groesseFilter, farbenFilter, search, sortConfig])
 
   function handleSort(key) {
     setSortConfig(p => ({
@@ -176,14 +196,30 @@ export default function App() {
     setDeletedEntry(null)
   }
 
-  async function handleDeleteAll() {
-    if (entries.length === 0) return
-    if (window.confirm(`Wirklich ALLE ${entries.length} Einträge löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) {
-      const { error } = await supabase.from('eintraege').delete().neq('id', '')
-      if (error) { alert('Fehler: ' + error.message); return }
-      setEntries([])
+  async function handleAutoExtract() {
+    const toUpdate = []
+    const nextEntries = entries.map(entry => {
+      const detected = extractSizeAndColors(entry.name)
+      const groesse = entry.groesse || detected.groesse
+      const farben = entry.farben.length > 0 ? entry.farben : detected.farben
+      if (groesse === entry.groesse && JSON.stringify(farben) === JSON.stringify(entry.farben)) return entry
+      const updated = processEntry({ ...entry, groesse, farben })
+      toUpdate.push(updated)
+      return updated
+    })
+
+    if (toUpdate.length === 0) {
+      alert('Keine neuen Größen oder Farben in den Artikelnamen gefunden.')
+      return
     }
+
+    for (const entry of toUpdate) {
+      await supabase.from('eintraege').update(toDb(entry)).eq('id', entry.id)
+    }
+    setEntries(nextEntries)
+    alert(`✓ ${toUpdate.length} Artikel automatisch aktualisiert.`)
   }
+
 
   function handleImport(e) {
     const file = e.target.files[0]
@@ -208,7 +244,9 @@ export default function App() {
             einkauf: parseFloat(r[4]) || 0,
             verkauf: parseFloat(r[5]) || 0,
             status: String(r[7] ?? '').trim() || 'verfügbar',
-            notizen: String(r[8] ?? '').trim(),
+            groesse: String(r[8] ?? '').trim(),
+            farben: String(r[9] ?? '').split(',').map(s => s.trim()).filter(Boolean),
+            notizen: String(r[10] ?? '').trim(),
           }))
 
         const existingNrs = new Set(entries.map(e => e.artikelnummer).filter(Boolean))
@@ -230,15 +268,16 @@ export default function App() {
   }
 
   function handleExportCSV() {
-    const header = ['Artikelnummer', 'Name', 'Datum Einkauf', 'Datum Verkauf', 'Einkauf', 'Verkauf', 'Gewinn', 'Status', 'Notizen']
+    const header = ['Artikelnummer', 'Name', 'Datum Einkauf', 'Datum Verkauf', 'Einkauf', 'Verkauf', 'Gewinn', 'Status', 'Größe', 'Farben', 'Notizen']
     const rows = filtered.map(e => [
       e.artikelnummer, e.name, e.datumEinkauf, e.datumVerkauf,
-      e.einkauf, e.verkauf, e.gewinn, e.status, e.notizen,
+      e.einkauf, e.verkauf, e.gewinn, e.status,
+      e.groesse, (e.farben || []).join(', '), e.notizen,
     ])
     const csv = [header, ...rows]
       .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     triggerDownload(blob, 'buchhaltung.csv')
   }
 
@@ -252,10 +291,12 @@ export default function App() {
       'Verkauf (€)': e.verkauf,
       'Gewinn (€)': e.gewinn,
       'Status': e.status,
+      'Größe': e.groesse,
+      'Farben': (e.farben || []).join(', '),
       'Notizen': e.notizen,
     }))
     const ws = XLSX.utils.json_to_sheet(data)
-    ws['!cols'] = [10, 25, 14, 14, 12, 12, 12, 16, 30].map(w => ({ wch: w }))
+    ws['!cols'] = [10, 25, 14, 14, 12, 12, 12, 16, 8, 20, 30].map(w => ({ wch: w }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Buchhaltung')
     XLSX.writeFile(wb, 'buchhaltung.xlsx')
@@ -282,11 +323,15 @@ export default function App() {
           onSearch={setSearch}
           statusFilter={statusFilter}
           onFilterChange={setStatusFilter}
+          groesseFilter={groesseFilter}
+          onGroesseChange={setGroesseFilter}
+          farbenFilter={farbenFilter}
+          onFarbenChange={setFarbenFilter}
           onAdd={() => setModal({ entry: null })}
           onImport={() => fileRef.current?.click()}
           onExportCSV={handleExportCSV}
           onExportExcel={handleExportExcel}
-          onDeleteAll={handleDeleteAll}
+          onAutoExtract={handleAutoExtract}
           totalCount={entries.length}
         />
         <input
