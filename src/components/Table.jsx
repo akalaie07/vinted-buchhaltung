@@ -1,4 +1,5 @@
 import { ChevronUp, ChevronDown, ChevronsUpDown, Pencil, Trash2, PackageOpen, MessageSquare } from 'lucide-react'
+import { COLORS } from '../constants.js'
 
 const COLS = [
   { key: 'artikelnummer', label: 'Artikel-Nr.' },
@@ -9,6 +10,8 @@ const COLS = [
   { key: 'verkauf',       label: 'Verkauf (€)',  right: true },
   { key: 'gewinn',        label: 'Gewinn (€)',   right: true },
   { key: 'status',        label: 'Status' },
+  { key: 'groesse',       label: 'Größe' },
+  { key: 'farben',        label: 'Farben', noSort: true },
   { key: 'notizen',       label: 'Notizen' },
 ]
 
@@ -65,14 +68,14 @@ export default function Table({ entries, sortConfig, onSort, onEdit, onDelete })
             {COLS.map(col => (
               <th
                 key={col.key}
-                onClick={() => col.key !== 'notizen' && onSort(col.key)}
+                onClick={() => !['notizen', 'farben'].includes(col.key) && onSort(col.key)}
                 className={`px-3 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide transition-colors whitespace-nowrap ${
-                  col.key !== 'notizen' ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 select-none' : ''
+                  !['notizen', 'farben'].includes(col.key) ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 select-none' : ''
                 }`}
               >
                 <div className={`flex items-center gap-1 ${col.right ? 'justify-end' : ''}`}>
                   {col.label}
-                  {col.key !== 'notizen' && <SortIcon colKey={col.key} sortConfig={sortConfig} />}
+                  {!['notizen', 'farben'].includes(col.key) && <SortIcon colKey={col.key} sortConfig={sortConfig} />}
                 </div>
               </th>
             ))}
@@ -84,7 +87,7 @@ export default function Table({ entries, sortConfig, onSort, onEdit, onDelete })
         <tbody>
           {entries.length === 0 ? (
             <tr>
-              <td colSpan={10}>
+              <td colSpan={12}>
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-600">
                   <PackageOpen size={40} className="mb-3 opacity-40" />
                   <p className="text-sm font-medium">Keine Einträge gefunden</p>
@@ -149,6 +152,39 @@ export default function Table({ entries, sortConfig, onSort, onEdit, onDelete })
                       {STATUS_LABEL[entry.status] || entry.status}
                     </span>
                   </td>
+                  {/* Größe */}
+                  <td className="px-3 py-2.5">
+                    {entry.groesse ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                        {entry.groesse}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                    )}
+                  </td>
+                  {/* Farben */}
+                  <td className="px-3 py-2.5">
+                    {entry.farben && entry.farben.length > 0 ? (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {entry.farben.map(val => {
+                          const color = COLORS.find(c => c.value === val)
+                          if (!color) return null
+                          return (
+                            <span
+                              key={val}
+                              title={color.label}
+                              className={`w-4 h-4 rounded-full inline-block flex-shrink-0 ${
+                                color.border ? 'border border-gray-300 dark:border-gray-500' : ''
+                              }`}
+                              style={{ backgroundColor: color.hex }}
+                            />
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                    )}
+                  </td>
                   {/* Notizen */}
                   <td className="px-3 py-2.5 max-w-[160px]">
                     {entry.notizen ? (
@@ -202,7 +238,7 @@ export default function Table({ entries, sortConfig, onSort, onEdit, onDelete })
               <td className="px-3 py-3 text-right text-sm font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                 {fmtEur(totalGewinn)}
               </td>
-              <td colSpan={3} />
+              <td colSpan={5} />
             </tr>
           </tfoot>
         )}

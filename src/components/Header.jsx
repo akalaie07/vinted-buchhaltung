@@ -21,6 +21,7 @@ export default function Header({
   farbenFilter, onFarbenChange,
   onAdd, onImport, onExportCSV, onExportExcel,
   onAutoExtract, totalCount,
+  onLogout,
 }) {
   const activeFilters = [statusFilter !== 'all', groesseFilter !== 'all', farbenFilter !== 'all'].filter(Boolean).length
 
@@ -42,13 +43,21 @@ export default function Header({
               </p>
             </div>
           </div>
-          <button
-            onClick={onToggleDark}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400"
-            title={darkMode ? 'Light Mode aktivieren' : 'Dark Mode aktivieren'}
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleDark}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400"
+              title={darkMode ? 'Light Mode aktivieren' : 'Dark Mode aktivieren'}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              onClick={onLogout}
+              className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"
+            >
+              Abmelden
+            </button>
+          </div>
         </div>
 
         {/* Search + filters row */}

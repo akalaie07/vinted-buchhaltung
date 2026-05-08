@@ -6,6 +6,7 @@ import Header from './components/Header.jsx'
 import Table from './components/Table.jsx'
 import EntryModal from './components/EntryModal.jsx'
 import SummaryBar from './components/SummaryBar.jsx'
+import LoginScreen from './components/LoginScreen.jsx'
 
 const VALID_STATUSES = new Set(['verfügbar', 'verkauft', 'storniert', 'rücksendung', 'rückerstattung', 'teilrückerstattung'])
 
@@ -98,6 +99,9 @@ function fuzzyMatch(text, word) {
 }
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(
+    () => sessionStorage.getItem('vb_logged_in') === 'true'
+  )
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('vb_dark') === 'true')
@@ -313,6 +317,19 @@ export default function App() {
     URL.revokeObjectURL(url)
   }
 
+  function handleLogout() {
+    sessionStorage.removeItem('vb_logged_in')
+    setLoggedIn(false)
+  }
+
+  if (!loggedIn) {
+    return (
+      <div className={darkMode ? 'dark' : ''}>
+        <LoginScreen onLogin={() => setLoggedIn(true)} />
+      </div>
+    )
+  }
+
   return (
     <div className={darkMode ? 'dark' : ''}>
       <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-200">
@@ -333,6 +350,7 @@ export default function App() {
           onExportExcel={handleExportExcel}
           onAutoExtract={handleAutoExtract}
           totalCount={entries.length}
+          onLogout={handleLogout}
         />
         <input
           ref={fileRef}
