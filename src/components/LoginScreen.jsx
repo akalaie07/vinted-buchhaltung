@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ShoppingBag } from 'lucide-react'
 
-const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'vinted2024'
+const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'Vintora2026'
 
 const inputCls = 'w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 dark:placeholder-gray-600 transition-colors'
 
@@ -12,7 +12,7 @@ export default function LoginScreen({ onLogin }) {
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (username === 'admin' && password === CORRECT_PASSWORD) {
+    if (username === 'Anas' && password === CORRECT_PASSWORD) {
       sessionStorage.setItem('vb_logged_in', 'true')
       onLogin()
     } else {
@@ -42,7 +42,7 @@ export default function LoginScreen({ onLogin }) {
               autoComplete="username"
               value={username}
               onChange={e => { setUsername(e.target.value); setError('') }}
-              placeholder="admin"
+              placeholder="Anas"
               className={inputCls}
               required
             />
