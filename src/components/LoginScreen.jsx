@@ -42,7 +42,7 @@ export default function LoginScreen({ onLogin }) {
               autoComplete="username"
               value={username}
               onChange={e => { setUsername(e.target.value); setError('') }}
-              placeholder="Anas"
+              placeholder=""
               className={inputCls}
               required
             />
