@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { SIZES, COLORS } from '../constants.js'
 
 const STATUS_OPTIONS = [
   { value: 'verfügbar',          label: 'Verfügbar' },
@@ -23,6 +24,8 @@ const BLANK = {
   einkauf: '',
   verkauf: '',
   status: 'verfügbar',
+  groesse: '',
+  farben: [],
   notizen: '',
 }
 
@@ -50,6 +53,8 @@ export default function EntryModal({ entry, onSave, onClose }) {
           einkauf: entry.einkauf !== undefined ? String(entry.einkauf) : '',
           verkauf: entry.verkauf !== undefined ? String(entry.verkauf) : '',
           status: entry.status || 'verfügbar',
+          groesse: entry.groesse || '',
+          farben: Array.isArray(entry.farben) ? entry.farben : [],
           notizen: entry.notizen || '',
         }
       : BLANK
@@ -186,6 +191,65 @@ export default function EntryModal({ entry, onSave, onClose }) {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+          </Field>
+
+          {/* Größe */}
+          <Field label="Größe">
+            <div className="flex flex-wrap gap-2">
+              {SIZES.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => set('groesse', form.groesse === s ? '' : s)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                    form.groesse === s
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-400'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* Farben */}
+          <Field label="Farbe">
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map(c => {
+                const selected = form.farben.includes(c.value)
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.label}
+                    onClick={() =>
+                      set('farben', selected
+                        ? form.farben.filter(v => v !== c.value)
+                        : [...form.farben, c.value]
+                      )
+                    }
+                    className={`w-7 h-7 rounded-full transition-all flex items-center justify-center flex-shrink-0 ${
+                      c.border ? 'border-2 border-gray-300 dark:border-gray-600' : ''
+                    } ${
+                      selected
+                        ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-gray-900 scale-110'
+                        : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                  >
+                    {selected && (
+                      <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none"
+                        stroke={c.value === 'weiss' ? '#555' : 'white'}
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      >
+                        <polyline points="2,6 5,9 10,3" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </Field>
 
           {/* Notizen */}
